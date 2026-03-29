@@ -1,15 +1,19 @@
 let questions = [];
+let submitted = false;
 
 async function loadQuestions() {
+  submitted = false;
+
   const res = await fetch("http://127.0.0.1:8000/questions");
   questions = await res.json();
 
   const quizDiv = document.getElementById("quiz");
   quizDiv.innerHTML = "";
 
+  document.getElementById("result").innerHTML = "";
+
   questions.forEach(q => {
     const div = document.createElement("div");
-    div.className = "question";
 
     let html = `<p>${q.question}</p>`;
 
@@ -25,12 +29,13 @@ async function loadQuestions() {
     div.innerHTML = html;
     quizDiv.appendChild(div);
   });
+
+  document.getElementById("submitBtn").disabled = false;
 }
 
 async function submitQuiz() {
   const answers = questions.map(q => {
     const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
-
     return {
       question_id: q.id,
       selected_answer: selected ? selected.value : ""
@@ -46,6 +51,16 @@ async function submitQuiz() {
   });
 
   const data = await res.json();
+
+  console.log(data); // debug
+
+  submitted = true;
+
+  // khóa chọn
+  document.querySelectorAll("input[type=radio]").forEach(i => i.disabled = true);
+
+  // khóa nút
+  document.getElementById("submitBtn").disabled = true;
 
   const resultDiv = document.getElementById("result");
 
