@@ -34,6 +34,46 @@ questions = [
         "question": "CSS dùng để làm gì?",
         "options": ["Xử lý logic", "Tạo database", "Thiết kế giao diện", "Viết API"],
         "correct_answer": "Thiết kế giao diện"
+    },
+    {
+        "id": 4,
+        "question": "Python thuộc loại ngôn ngữ nào?",
+        "options": ["Compiled", "Interpreted", "Assembly", "Machine"],
+        "correct_answer": "Interpreted"
+    },
+    {
+        "id": 5,
+        "question": "HTTP là viết tắt của gì?",
+        "options": [
+            "HyperText Transfer Protocol",
+            "High Transfer Text Protocol",
+            "Hyper Transfer Text Process",
+            "Home Tool Transfer Protocol"
+        ],
+        "correct_answer": "HyperText Transfer Protocol"
+    },
+    {
+        "id": 6,
+        "question": "Framework dùng cho Python là?",
+        "options": ["Django", "Laravel", "Spring", "React"],
+        "correct_answer": "Django"
+    },
+    {
+        "id": 7,
+        "question": "Câu lệnh nào dùng để khai báo biến trong JavaScript?",
+        "options": ["var", "int", "string", "define"],
+        "correct_answer": "var"
+    },
+    {
+        "id": 8,
+        "question": "API là gì?",
+        "options": [
+            "Application Programming Interface",
+            "Advanced Program Internet",
+            "Application Process Input",
+            "Auto Programming Interface"
+        ],
+        "correct_answer": "Application Programming Interface"
     }
 ]
 
@@ -53,9 +93,13 @@ class QuestionCreate(BaseModel):
 # ===== API =====
 
 # 🔹 Lấy câu hỏi
+QUESTION_LIMIT = 7  # mặc định
+
 @app.get("/questions")
-def get_questions():
-    selected = random.sample(questions, min(5, len(questions)))
+def get_questions(limit: int = None):
+    final_limit = limit if limit else QUESTION_LIMIT
+
+    selected = random.sample(questions, min(final_limit, len(questions)))
 
     return [
         {
