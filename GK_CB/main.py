@@ -52,10 +52,10 @@ class QuestionCreate(BaseModel):
 
 # ===== API =====
 
-# 🔹 Lấy câu hỏi (random 5 câu nếu có nhiều)
+# 🔹 Lấy câu hỏi
 @app.get("/questions")
 def get_questions():
-    selected_questions = random.sample(questions, min(5, len(questions)))
+    selected = random.sample(questions, min(5, len(questions)))
 
     return [
         {
@@ -63,9 +63,8 @@ def get_questions():
             "question": q["question"],
             "options": q["options"]
         }
-        for q in selected_questions
+        for q in selected
     ]
-
 
 # 🔹 Nộp bài
 @app.post("/submit")
@@ -73,17 +72,8 @@ def submit_answers(data: SubmitRequest):
     score = 0
     results = []
 
-    # check số lượng câu
-    if len(data.answers) > len(questions):
-        return {"error": "Số câu trả lời không hợp lệ"}
-
     for ans in data.answers:
-        # tìm câu hỏi
-        q = None
-        for question in questions:
-            if question["id"] == ans.question_id:
-                q = question
-                break
+        q = next((q for q in questions if q["id"] == ans.question_id), None)
 
         if not q:
             continue
@@ -106,38 +96,29 @@ def submit_answers(data: SubmitRequest):
         "details": results
     }
 
-
 # 🔹 Thêm câu hỏi
 @app.post("/add-question")
 def add_question(q: QuestionCreate):
+    if len(q.options) != 4:
+        return {"error": "Phải có đúng 4 đáp án"}
+
+    if q.correct_answer not in q.options:
+        return {"error": "Đáp án đúng phải nằm trong options"}
+
     new_id = max([item["id"] for item in questions]) + 1 if questions else 1
 
-    new_question = {
+    new_q = {
         "id": new_id,
         "question": q.question,
         "options": q.options,
         "correct_answer": q.correct_answer
     }
 
-    questions.append(new_question)
+    questions.append(new_q)
 
-    return {
-        "message": "Thêm câu hỏi thành công",
-        "data": new_question
-    }
+    return {"message": "Thêm thành công", "data": new_q}
 
-
-# 🔹 Xem tất cả câu hỏi (có đáp án)
+# 🔹 Xem tất cả câu hỏi
 @app.get("/all-questions")
 def get_all_questions():
     return questions
-
-
-# 🔹 Xóa câu hỏi
-@app.delete("/delete-question/{question_id}")
-def delete_question(question_id: int):
-    global questions
-
-    questions = [q for q in questions if q["id"] != question_id]
-
-    return {"message": "Đã xóa câu hỏi"}
