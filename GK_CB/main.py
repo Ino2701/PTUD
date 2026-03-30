@@ -6,6 +6,9 @@ import random
 
 app = FastAPI()
 
+# ===== CONFIG =====
+QUESTION_LIMIT = 5
+
 # ===== CORS =====
 app.add_middleware(
     CORSMiddleware,
@@ -20,60 +23,37 @@ questions = [
     {
         "id": 1,
         "question": "React là thư viện của ngôn ngữ nào?",
+        "description": "React dùng để xây dựng UI",
         "options": ["Python", "JavaScript", "Java", "C#"],
         "correct_answer": "JavaScript"
     },
     {
         "id": 2,
         "question": "HTML là gì?",
-        "options": ["Ngôn ngữ lập trình", "Ngôn ngữ đánh dấu", "Cơ sở dữ liệu", "Framework"],
+        "description": "Ngôn ngữ nền tảng web",
+        "options": ["Ngôn ngữ lập trình", "Ngôn ngữ đánh dấu", "CSDL", "Framework"],
         "correct_answer": "Ngôn ngữ đánh dấu"
     },
     {
         "id": 3,
         "question": "CSS dùng để làm gì?",
-        "options": ["Xử lý logic", "Tạo database", "Thiết kế giao diện", "Viết API"],
-        "correct_answer": "Thiết kế giao diện"
+        "description": "Thiết kế giao diện",
+        "options": ["Logic", "DB", "UI", "API"],
+        "correct_answer": "UI"
     },
     {
         "id": 4,
-        "question": "Python thuộc loại ngôn ngữ nào?",
-        "options": ["Compiled", "Interpreted", "Assembly", "Machine"],
+        "question": "Python là gì?",
+        "description": "Ngôn ngữ phổ biến",
+        "options": ["Compiled", "Interpreted", "ASM", "Machine"],
         "correct_answer": "Interpreted"
     },
     {
         "id": 5,
-        "question": "HTTP là viết tắt của gì?",
-        "options": [
-            "HyperText Transfer Protocol",
-            "High Transfer Text Protocol",
-            "Hyper Transfer Text Process",
-            "Home Tool Transfer Protocol"
-        ],
-        "correct_answer": "HyperText Transfer Protocol"
-    },
-    {
-        "id": 6,
-        "question": "Framework dùng cho Python là?",
-        "options": ["Django", "Laravel", "Spring", "React"],
-        "correct_answer": "Django"
-    },
-    {
-        "id": 7,
-        "question": "Câu lệnh nào dùng để khai báo biến trong JavaScript?",
-        "options": ["var", "int", "string", "define"],
-        "correct_answer": "var"
-    },
-    {
-        "id": 8,
-        "question": "API là gì?",
-        "options": [
-            "Application Programming Interface",
-            "Advanced Program Internet",
-            "Application Process Input",
-            "Auto Programming Interface"
-        ],
-        "correct_answer": "Application Programming Interface"
+        "question": "HTTP là gì?",
+        "description": "Giao thức web",
+        "options": ["HTTP", "FTP", "SMTP", "TCP"],
+        "correct_answer": "HTTP"
     }
 ]
 
@@ -87,30 +67,34 @@ class SubmitRequest(BaseModel):
 
 class QuestionCreate(BaseModel):
     question: str
+    description: str
     options: List[str]
     correct_answer: str
 
+class QuestionUpdate(BaseModel):
+    question: str | None = None
+    description: str | None = None
+    options: List[str] | None = None
+    correct_answer: str | None = None
 # ===== API =====
 
-# 🔹 Lấy câu hỏi
-QUESTION_LIMIT = 7  # mặc định
-
+# 📋 GET QUESTIONS
 @app.get("/questions")
-def get_questions(limit: int = None):
-    final_limit = limit if limit else QUESTION_LIMIT
-
-    selected = random.sample(questions, min(final_limit, len(questions)))
+def get_questions():
+    selected = random.sample(questions, min(QUESTION_LIMIT, len(questions)))
 
     return [
         {
             "id": q["id"],
             "question": q["question"],
+            "description": q["description"],
             "options": q["options"]
         }
         for q in selected
     ]
 
-# 🔹 Nộp bài
+
+# 📝 SUBMIT
 @app.post("/submit")
 def submit_answers(data: SubmitRequest):
     score = 0
@@ -118,11 +102,10 @@ def submit_answers(data: SubmitRequest):
 
     for ans in data.answers:
         q = next((q for q in questions if q["id"] == ans.question_id), None)
-
         if not q:
             continue
 
-        is_correct = ans.selected_answer == q["correct_answer"] if ans.selected_answer else False
+        is_correct = ans.selected_answer == q["correct_answer"]
 
         if is_correct:
             score += 1
@@ -140,20 +123,22 @@ def submit_answers(data: SubmitRequest):
         "details": results
     }
 
-# 🔹 Thêm câu hỏi
+
+# ➕ ADD QUESTION
 @app.post("/add-question")
 def add_question(q: QuestionCreate):
     if len(q.options) != 4:
-        return {"error": "Phải có đúng 4 đáp án"}
+        return {"error": "Phải có 4 đáp án"}
 
     if q.correct_answer not in q.options:
-        return {"error": "Đáp án đúng phải nằm trong options"}
+        return {"error": "Đáp án không hợp lệ"}
 
     new_id = max([item["id"] for item in questions]) + 1 if questions else 1
 
     new_q = {
         "id": new_id,
         "question": q.question,
+        "description": q.description,
         "options": q.options,
         "correct_answer": q.correct_answer
     }
@@ -162,7 +147,78 @@ def add_question(q: QuestionCreate):
 
     return {"message": "Thêm thành công", "data": new_q}
 
-# 🔹 Xem tất cả câu hỏi
+
+# ❌ DELETE QUESTION
+@app.delete("/delete-question/{question_id}")
+def delete_question(question_id: int):
+    global questions
+
+    q = next((q for q in questions if q["id"] == question_id), None)
+
+    if not q:
+        return {"message": "Không tìm thấy câu hỏi"}
+
+    questions = [q for q in questions if q["id"] != question_id]
+
+    return {"message": f"Đã xóa câu hỏi id = {question_id}"}
+
+
+# ✏️ UPDATE QUESTION
+@app.put("/update-question/{question_id}")
+def update_question(question_id: int, updated_q: QuestionCreate):
+
+    if len(updated_q.options) != 4:
+        return {"error": "Phải có 4 đáp án"}
+
+    if updated_q.correct_answer not in updated_q.options:
+        return {"error": "Đáp án không hợp lệ"}
+
+    for q in questions:
+        if q["id"] == question_id:
+            q["question"] = updated_q.question
+            q["description"] = updated_q.description
+            q["options"] = updated_q.options
+            q["correct_answer"] = updated_q.correct_answer
+
+            return {"message": "Cập nhật thành công", "data": q}
+
+    return {"message": "Không tìm thấy câu hỏi"}
+
+@app.patch("/update-question/{question_id}")
+def update_question(question_id: int, updated_q: QuestionUpdate):
+
+    for q in questions:
+        if q["id"] == question_id:
+
+            # chỉ cập nhật nếu có gửi lên
+            if updated_q.question is not None:
+                q["question"] = updated_q.question
+
+            if updated_q.description is not None:
+                q["description"] = updated_q.description
+
+            if updated_q.options is not None:
+                if len(updated_q.options) != 4:
+                    return {"error": "Phải có 4 đáp án"}
+                q["options"] = updated_q.options
+
+            if updated_q.correct_answer is not None:
+                # nếu đã có options mới thì check theo options mới
+                opts = updated_q.options if updated_q.options else q["options"]
+
+                if updated_q.correct_answer not in opts:
+                    return {"error": "Đáp án không hợp lệ"}
+
+                q["correct_answer"] = updated_q.correct_answer
+
+            return {
+                "message": "Cập nhật thành công",
+                "data": q
+            }
+
+    return {"message": "Không tìm thấy câu hỏi"}
+
+# 📌 XEM TẤT CẢ (để test CRUD)
 @app.get("/all-questions")
-def get_all_questions():
+def get_all():
     return questions
