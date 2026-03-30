@@ -3,27 +3,196 @@
 <head>
   <meta charset="UTF-8">
   <title>Quiz App</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ================= BODY + HEADER ================= */
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: auto;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    #timer {
+      text-align: center;
+      color: #ff5722;
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+
+    /* ================= QUIZ CÁC CÂU HỎI ================= */
+    #quiz > div {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      border-left: 5px solid #007bff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+
+    #quiz > div:hover {
+      transform: translateY(-3px);
+    }
+
+    /* ================= CÁC ĐÁP ÁN ================= */
+    input[type=radio] + label,
+    label input[type=radio] {
+      cursor: pointer;
+    }
+
+    #quiz label {
+      display: block;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 5px;
+      transition: background 0.2s;
+    }
+
+    #quiz label:hover {
+      background: #e6f0ff;
+    }
+
+    /* highlight khi chọn */
+    #quiz input[type=radio]:checked + label {
+      background: #d0e7ff;
+    }
+
+    /* ================= BUTTON ================= */
+    button {
+      padding: 10px 15px;
+      margin: 10px 5px;
+      cursor: pointer;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 5px;
+      transition: 0.2s;
+      min-width: 100px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    /* ================= RESULT ================= */
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    #result p {
+      margin: 8px 0;
+    }
+
+    #result h3 {
+      margin-bottom: 10px;
+      color: #007bff;
+    }
+
+    /* ================= MISC ================= */
+    .pointer { cursor: pointer; }
+    .hide { display: none; }
+    .show { display: block; }
+  </style>
 </head>
 <body>
 
 <h1>Quiz App</h1>
-<!-- <button onclick="goToAdmin()">Admin</button> -->
 <h3 id="timer">Thời gian: 0s</h3>
+
 <button onclick="loadQuestions()">Bắt đầu</button>
+<button id="restartBtn" class="hide" onclick="restartQuiz()">Làm lại</button>
 
+<div id="quiz"></div>
+<button id="submitBtn" onclick="submitQuiz()" disabled>Nộp bài</button>
 
-<div id="quiz">
+<div id="result"></div>
 
-</div>
+<script>
+let questions = [
+  {id:1,question:"React là thư viện của ngôn ngữ nào?",description:"React dùng để xây dựng UI",options:["Python","JavaScript","Java","C#"],correct_answer:"JavaScript"},
+  {id:2,question:"HTML là gì?",description:"Ngôn ngữ nền tảng web",options:["Ngôn ngữ lập trình","Ngôn ngữ đánh dấu","CSDL","Framework"],correct_answer:"Ngôn ngữ đánh dấu"},
+  {id:3,question:"CSS dùng để làm gì?",description:"Thiết kế giao diện",options:["Logic","DB","UI","API"],correct_answer:"UI"},
+  {id:4,question:"Python là gì?",description:"Ngôn ngữ phổ biến",options:["Compiled","Interpreted","ASM","Machine"],correct_answer:"Interpreted"},
+  {id:5,question:"HTTP là gì?",description:"Giao thức web",options:["HTTP","FTP","SMTP","TCP"],correct_answer:"HTTP"}
+];
 
-<button id="submitBtn" onclick="submitQuiz()">Nộp bài</button>
-<button id="restartBtn" onclick="restartQuiz()" style="display:none;">Làm lại</button>
+let submitted = false;
+let time = 0;
+let timerInterval;
 
-<div id="result" class="result"></div>
+function startTimer() {
+  time = 0;
+  document.getElementById("timer").innerText = "Thời gian: 0s";
+  timerInterval = setInterval(()=>{
+    time++;
+    document.getElementById("timer").innerText = "Thời gian: " + time + "s";
+  },1000);
+}
 
-<script src="script.js"></script>
+function loadQuestions() {
+  submitted = false;
+  startTimer();
+  document.getElementById("quiz").innerHTML = "";
+  document.getElementById("result").innerHTML = "";
+  document.getElementById("submitBtn").disabled = false;
+  document.getElementById("restartBtn").classList.add("hide");
+
+  questions.forEach(q=>{
+    const div = document.createElement("div");
+    let html = `<p><b>${q.question}</b></p>
+                <p style="color: gray;">${q.description}</p>`;
+    q.options.forEach(opt=>{
+      html += `<input type="radio" name="q${q.id}" id="q${q.id}-${opt}" value="${opt}">
+               <label for="q${q.id}-${opt}">${opt}</label>`;
+    });
+    div.innerHTML = html;
+    document.getElementById("quiz").appendChild(div);
+  });
+}
+
+function submitQuiz() {
+  const answers = questions.map(q=>{
+    const selected = document.querySelector(`input[name="q${q.id}"]:checked`);
+    return {question_id:q.id,selected_answer:selected ? selected.value : ""};
+  });
+
+  let score = 0;
+  const resultDiv = document.getElementById("result");
+  let html = "";
+  answers.forEach(ans=>{
+    const q = questions.find(qq=>qq.id===ans.question_id);
+    const is_correct = ans.selected_answer === q.correct_answer;
+    if(is_correct) score++;
+    html += `<p>Câu ${q.id}: Bạn chọn: ${ans.selected_answer || "Không chọn"} → ${is_correct ? "Đúng" : "Sai"} (Đáp án: ${q.correct_answer})</p>`;
+  });
+
+  clearInterval(timerInterval);
+  submitted = true;
+
+  document.querySelectorAll("input[type=radio]").forEach(i=>i.disabled=true);
+  document.getElementById("submitBtn").disabled=true;
+
+  html = `<h3>Điểm: ${score}/${questions.length}</h3>
+          <p>Thời gian làm bài: ${time} giây</p>` + html;
+  resultDiv.innerHTML = html;
+
+  document.getElementById("restartBtn").classList.remove("hide");
+}
+
+function restartQuiz() {
+  loadQuestions();
+}
+</script>
 </body>
 </html>
-
-
