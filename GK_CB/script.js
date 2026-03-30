@@ -1,8 +1,22 @@
 let questions = [];
 let submitted = false;
 
+let time = 0;
+let timerInterval;
+
+function startTimer() {
+  time = 0;
+
+  timerInterval = setInterval(() => {
+    time++;
+    document.getElementById("timer").innerText = "Thời gian: " + time + "s";
+  }, 1000);
+}
+
 async function loadQuestions() {
   submitted = false;
+
+  startTimer();
 
   const res = await fetch("http://127.0.0.1:8000/questions");
   questions = await res.json();
@@ -15,7 +29,10 @@ async function loadQuestions() {
   questions.forEach(q => {
     const div = document.createElement("div");
 
-    let html = `<p>${q.question}</p>`;
+    let html = `
+      <p><b>${q.question}</b></p>
+      <p style="color: gray;">${q.description}</p>
+    `;
 
     q.options.forEach(opt => {
       html += `
@@ -28,6 +45,7 @@ async function loadQuestions() {
 
     div.innerHTML = html;
     quizDiv.appendChild(div);
+    document.getElementById("restartBtn").style.display = "none";
   });
 
   document.getElementById("submitBtn").disabled = false;
@@ -52,19 +70,17 @@ async function submitQuiz() {
 
   const data = await res.json();
 
-  console.log(data); // debug
+  clearInterval(timerInterval);
 
   submitted = true;
 
-  // khóa chọn
   document.querySelectorAll("input[type=radio]").forEach(i => i.disabled = true);
-
-  // khóa nút
   document.getElementById("submitBtn").disabled = true;
 
   const resultDiv = document.getElementById("result");
 
   let html = `<h3>Điểm: ${data.score}/${data.total}</h3>`;
+  html += `<p>Thời gian làm bài: ${time} giây</p>`;
 
   data.details.forEach(d => {
     html += `
@@ -76,6 +92,23 @@ async function submitQuiz() {
       </p>
     `;
   });
-
+document.getElementById("restartBtn").style.display = "inline-block";
   resultDiv.innerHTML = html;
+}
+function goToAdmin() {
+  window.location.href = "admin.html";
+}
+function restartQuiz() {
+  clearInterval(timerInterval);
+
+  time = 0;
+  submitted = false;
+  questions = [];
+
+  document.getElementById("timer").innerText = "Thời gian: 0s";
+  document.getElementById("quiz").innerHTML = "";
+  document.getElementById("result").innerHTML = "";
+
+  document.getElementById("submitBtn").disabled = false;
+  document.getElementById("restartBtn").style.display = "none";
 }
